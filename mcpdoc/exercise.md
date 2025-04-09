@@ -4,7 +4,7 @@
 
 [llms.txt](https://llmstxt.org/) is a website index for LLMs, providing background information, guidance, and links to detailed markdown files. IDEs like Cursor and Windsurf or apps like Claude Code/Desktop can use `llms.txt` to retrieve context for tasks. However, these apps use different built-in tools to read and process files like `llms.txt`. The retrieval process can be opaque, and there is not always a way to audit the tool calls or the context returned.
 
-[MCP](https://github.com/modelcontextprotocol) offers a way for developers to have *full control* over tools used by these applications. Here, we create [an open source MCP server](https://github.com/modelcontextprotocol) to provide MCP host applications (e.g., Cursor, Windsurf, Claude Code/Desktop) with (1) a user-defined list of `llms.txt` files and (2) a simple  `fetch_docs` tool read URLs within any of the provided `llms.txt` files. This allows the user to audit each tool call as well as the context returned. 
+[MCP](https://github.com/modelcontextprotocol) offers a way for developers to have *full control* over tools used by these applications. Here, we create [an open source MCP server](https://github.com/langchain-ai/mcpdoc) called `mcpdoc` to provide MCP host applications (e.g., Cursor, Windsurf, Claude Code/Desktop) with (1) a user-defined list of `llms.txt` files and (2) a simple  `fetch_docs` tool read URLs within any of the provided `llms.txt` files. This allows the user to audit each tool call as well as the context returned. 
 
 ![](https://github.com/user-attachments/assets/736f8f55-833d-4200-b833-5fca01a09e1b)
 
@@ -155,3 +155,106 @@ what are types of memory in LangGraph?
 ```
 
 ![](https://github.com/user-attachments/assets/180966b5-ab03-4b78-8b5d-bab43f5954ed)
+
+## Command-line Interface
+
+The `mcpdoc` command provides a simple CLI for launching the documentation server. 
+
+You can specify documentation sources in three ways, and these can be combined:
+
+1. Using a YAML config file:
+
+* This will load the LangGraph Python documentation from the `sample_config.yaml` file in this repo.
+
+```bash
+mcpdoc --yaml sample_config.yaml
+```
+
+2. Using a JSON config file:
+
+* This will load the LangGraph Python documentation from the `sample_config.json` file in this repo.
+
+```bash
+mcpdoc --json sample_config.json
+```
+
+3. Directly specifying llms.txt URLs with optional names:
+
+* URLs can be specified either as plain URLs or with optional names using the format `name:url`.
+* You can specify multiple URLs by using the `--urls` parameter multiple times.
+* This is how we loaded `llms.txt` for the MCP server above.
+
+```bash
+mcpdoc --urls LangGraph:https://langchain-ai.github.io/langgraph/llms.txt --urls LangChain:https://python.langchain.com/llms.txt
+```
+
+You can also combine these methods to merge documentation sources:
+
+```bash
+mcpdoc --yaml sample_config.yaml --json sample_config.json --urls LangGraph:https://langchain-ai.github.io/langgraph/llms.txt --urls LangChain:https://python.langchain.com/llms.txt
+```
+
+## Additional Options
+
+- `--follow-redirects`: Follow HTTP redirects (defaults to False)
+- `--timeout SECONDS`: HTTP request timeout in seconds (defaults to 10.0)
+
+Example with additional options:
+
+```bash
+mcpdoc --yaml sample_config.yaml --follow-redirects --timeout 15
+```
+
+This will load the LangGraph Python documentation with a 15-second timeout and follow any HTTP redirects if necessary.
+
+## Configuration Format
+
+Both YAML and JSON configuration files should contain a list of documentation sources. 
+
+Each source must include an `llms_txt` URL and can optionally include a `name`:
+
+### YAML Configuration Example (sample_config.yaml)
+
+```yaml
+# Sample configuration for mcp-mcpdoc server
+# Each entry must have a llms_txt URL and optionally a name
+- name: LangGraph Python
+  llms_txt: https://langchain-ai.github.io/langgraph/llms.txt
+```
+
+### JSON Configuration Example (sample_config.json)
+
+```json
+[
+  {
+    "name": "LangGraph Python",
+    "llms_txt": "https://langchain-ai.github.io/langgraph/llms.txt"
+  }
+]
+```
+
+## Programmatic Usage
+
+```python
+from mcpdoc.main import create_server
+
+# Create a server with documentation sources
+server = create_server(
+    [
+        {
+            "name": "LangGraph Python",
+            "llms_txt": "https://langchain-ai.github.io/langgraph/llms.txt",
+        },
+        # You can add multiple documentation sources
+        # {
+        #     "name": "Another Documentation",
+        #     "llms_txt": "https://example.com/llms.txt",
+        # },
+    ],
+    follow_redirects=True,
+    timeout=15.0,
+)
+
+# Run the server
+server.run(transport="stdio")
+```
